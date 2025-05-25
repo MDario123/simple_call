@@ -40,7 +40,9 @@
           rust-analyzer
 
           pkg-config
+          cmake
           alsa-lib
+          libopus
         ];
 
         shellHook = ''
