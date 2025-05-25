@@ -22,12 +22,13 @@ impl RoomCoordinator {
         let room_hash = wait_for_room_hash(&mut stream);
         let partner = self.rooms.lock().unwrap().remove(&room_hash);
 
+        // Always send the waiting signal, even if there is a partner.
+        stream
+            .write_all(&[SIGNAL_WAITING_IN_ROOM])
+            .expect("Failed to write to stream");
+
         match partner {
             None => {
-                // Wait for a partner
-                stream
-                    .write_all(&[SIGNAL_WAITING_IN_ROOM])
-                    .expect("Failed to write to stream");
                 self.rooms
                     .lock()
                     .expect("Lock should not be poisoned")
