@@ -13,22 +13,31 @@
       };
     in
     {
-      packages."${system}".tty_client = pkgs.rust.packages.stable.rustPlatform.buildRustPackage {
-        name = "tty_client";
-        src = ./tty_client;
+      packages."${system}" = {
 
-        cargoLock = {
-          lockFile = ./tty_client/Cargo.lock;
+        server = pkgs.rust.packages.stable.rustPlatform.buildRustPackage {
+          name = "server";
+          src = ./server;
+
+          cargoLock = {
+            lockFile = ./server/Cargo.lock;
+          };
         };
 
-        nativeBuildInputs = with pkgs; [
-          pkg-config
-          alsa-lib
-        ];
+        tty_client = pkgs.rust.packages.stable.rustPlatform.buildRustPackage {
+          name = "tty_client";
+          src = ./tty_client;
 
-        buildInputs = with pkgs; [
-          openssl
-        ];
+          cargoLock = {
+            lockFile = ./tty_client/Cargo.lock;
+          };
+
+          nativeBuildInputs = with pkgs; [
+            pkg-config
+            alsa-lib
+          ];
+        };
+
       };
 
       devShells."${system}".tty_client = pkgs.mkShell {
