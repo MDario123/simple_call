@@ -20,24 +20,30 @@ pub struct RoomCoordinator {
 impl RoomCoordinator {
     pub fn handle_incoming_conn(&mut self, mut stream: TcpStream) {
         let room_hash = wait_for_room_hash(&mut stream);
-        let partner = self.rooms.lock().unwrap().remove(&room_hash);
 
         // Always send the waiting signal, even if there is a partner.
         stream
             .write_all(&[SIGNAL_WAITING_IN_ROOM])
             .expect("Failed to write to stream");
 
-        match partner {
-            None => {
-                self.rooms
-                    .lock()
-                    .expect("Lock should not be poisoned")
-                    .insert(room_hash, stream);
+        println!("Sent SIGNAL_WAITING_IN_ROOM");
+
+        let partner_stream = {
+            let mut rooms = self.rooms.lock().expect("Lock should not be poisoned");
+            let partner = rooms.remove(&room_hash);
+
+            match partner {
+                None => {
+                    println!("No partner found, waiting for one");
+                    rooms.insert(room_hash, stream);
+                    return;
+                }
+                Some(partner_stream) => partner_stream,
             }
-            Some(partner_stream) => {
-                CallCoordinator::new(stream, partner_stream).coordinate();
-            }
-        }
+        };
+
+        println!("Initiating call with partner");
+        CallCoordinator::new(stream, partner_stream).coordinate();
     }
 }
 

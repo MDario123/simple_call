@@ -39,22 +39,16 @@ fn conn(room: &[u8], send_msg: &[u8], recv_msg: &[u8]) {
 
     let mut buffer = [0; 1024];
 
-    let size = tcp_stream
-        .read(&mut buffer)
+    tcp_stream
+        .read_exact(&mut buffer[..4])
         .expect("Failed to read from TCP stream.");
-
-    assert!((3..=4).contains(&size));
 
     assert!(matches!(
         buffer[0..4],
-        [SIGNAL_WAITING_IN_ROOM, SIGNAL_PARTNER_FOUND, _, _] | [SIGNAL_PARTNER_FOUND, _, _, _]
+        [SIGNAL_WAITING_IN_ROOM, SIGNAL_PARTNER_FOUND, _, _]
     ));
 
-    let server_udp_port = if size == 4 {
-        u16::from_be_bytes([buffer[2], buffer[3]])
-    } else {
-        u16::from_be_bytes([buffer[1], buffer[2]])
-    };
+    let server_udp_port = u16::from_be_bytes([buffer[2], buffer[3]]);
 
     let udp_sock =
         UdpSocket::bind("0.0.0.0:0").expect("Failed to bind UDP socket. All UDP ports are in use?");
@@ -118,18 +112,21 @@ fn end_to_end() {
         main();
     });
 
-    let client1 = std::thread::spawn(move || {
-        conn(b"room", &[42], &[24]);
-    });
+    // Run several times to detect race conditions, has happened before
+    for _ in 0..20 {
+        let client1 = std::thread::spawn(move || {
+            conn(b"room", &[42], &[24]);
+        });
 
-    let client2 = std::thread::spawn(move || {
-        conn(b"room", &[24], &[42]);
-    });
+        let client2 = std::thread::spawn(move || {
+            conn(b"room", &[24], &[42]);
+        });
 
-    while !client1.is_finished() || !client2.is_finished() {
-        std::thread::sleep(std::time::Duration::from_millis(1));
+        while !client1.is_finished() || !client2.is_finished() {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+
+        client1.join().expect("Client 1 failed");
+        client2.join().expect("Client 2 failed");
     }
-
-    client1.join().expect("Client 1 failed");
-    client2.join().expect("Client 2 failed");
 }
