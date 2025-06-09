@@ -9,6 +9,7 @@
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
+        config.allowUnfree = true;
         inherit system;
       };
     in
@@ -40,23 +41,35 @@
 
       };
 
-      devShells."${system}".tty_client = pkgs.mkShell {
-        buildInputs = with pkgs; [
-          cargo
-          rustc
-          clippy
-          rustfmt
-          rust-analyzer
+      devShells."${system}" = {
+        android_app = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            android-studio
+          ];
 
-          pkg-config
-          cmake
-          alsa-lib
-          libopus
-        ];
+          shellHook = ''
+            export SHELL=$(which zsh)
+          '';
+        };
 
-        shellHook = ''
-          export SHELL=$(which zsh)
-        '';
+        tty_client = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            cargo
+            rustc
+            clippy
+            rustfmt
+            rust-analyzer
+
+            pkg-config
+            cmake
+            alsa-lib
+            libopus
+          ];
+
+          shellHook = ''
+            export SHELL=$(which zsh)
+          '';
+        };
       };
     };
 }
