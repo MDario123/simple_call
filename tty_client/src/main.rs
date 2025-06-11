@@ -3,7 +3,7 @@ mod call;
 use std::{
     env::args,
     io::{Read, Write},
-    net::{IpAddr, SocketAddr, TcpStream, ToSocketAddrs, UdpSocket},
+    net::{IpAddr, SocketAddr, TcpStream, UdpSocket},
     thread::sleep,
     time::Duration,
 };
@@ -40,6 +40,11 @@ fn main() {
 
     tcp_stream
         .write_all(&room_hash)
+        .expect("Failed to write to TCP stream.");
+
+    // Relay true
+    tcp_stream
+        .write_all(&[1])
         .expect("Failed to write to TCP stream.");
 
     // Receive server udp port
@@ -83,39 +88,7 @@ fn main() {
     let udp_sock =
         UdpSocket::bind("0.0.0.0:0").expect("Failed to bind UDP socket. All UDP ports are in use?");
 
-    udp_sock
-        .set_read_timeout(Some(std::time::Duration::from_secs(1)))
-        .expect("Failed to set read timeout.");
-
     let server_udp_addr = SocketAddr::new(host, server_udp_port);
 
-    // Send a UDP packet to the server to establish the connection
-    udp_sock
-        .send_to(&[], server_udp_addr)
-        .expect("Failed to send UDP packet.");
-
-    // Wait for a bit to ensure the server has processed the request
-    std::thread::sleep(std::time::Duration::from_millis(10));
-
-    let peer_udp_addr = {
-        let size = tcp_stream
-            .read(&mut buffer)
-            .expect("Failed to read from TCP stream.");
-
-        assert!(
-            size >= 6,
-            "Expected peer UDP address. Got only {} bytes.",
-            size
-        );
-
-        addr_from_bytes(&buffer[0..6])
-    };
-
-    call::handle_call(udp_sock, peer_udp_addr);
-}
-
-fn addr_from_bytes(buffer: &[u8]) -> SocketAddr {
-    let ip = IpAddr::from([buffer[0], buffer[1], buffer[2], buffer[3]]);
-    let port = u16::from_be_bytes([buffer[4], buffer[5]]);
-    SocketAddr::new(ip, port)
+    call::handle_call(udp_sock, server_udp_addr);
 }

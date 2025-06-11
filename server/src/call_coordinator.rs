@@ -33,7 +33,7 @@ pub struct Handshake {
 pub enum CallCoordinatorState {
     HandshakeBegin(TcpStream, TcpStream),
     Handshake(Handshake),
-    Relay(UdpSocket, UdpSocket),
+    Relay(UdpSocket, UdpSocket, SocketAddr, SocketAddr),
     Finished,
 }
 
@@ -77,20 +77,16 @@ impl CallCoordinator {
                     send_udp_addr(&udp1, &mut stream1);
                     send_udp_addr(&udp2, &mut stream2);
 
-                    if self.settings.relay {
-                        self.state = CallCoordinatorState::Relay(udp1, udp2);
-                    } else {
-                        let handshake = Handshake {
-                            tcp1: stream1,
-                            tcp2: stream2,
-                            udp1,
-                            udp2,
-                            client1_udp_addr: None,
-                            client2_udp_addr: None,
-                            retries: 10,
-                        };
-                        self.state = CallCoordinatorState::Handshake(handshake);
-                    }
+                    let handshake = Handshake {
+                        tcp1: stream1,
+                        tcp2: stream2,
+                        udp1,
+                        udp2,
+                        client1_udp_addr: None,
+                        client2_udp_addr: None,
+                        retries: 10,
+                    };
+                    self.state = CallCoordinatorState::Handshake(handshake);
                 }
                 CallCoordinatorState::Handshake(mut handshake) => {
                     handshake.retries -= 1;
@@ -122,48 +118,63 @@ impl CallCoordinator {
                     if let (Some(addr1), Some(addr2)) =
                         (handshake.client1_udp_addr, handshake.client2_udp_addr)
                     {
-                        println!("UDP addresses received.");
-                        println!("Client 1 UDP address: {}", addr1);
-                        println!("Client 2 UDP address: {}", addr2);
+                        if self.settings.relay {
+                            self.state = CallCoordinatorState::Relay(
+                                handshake.udp1,
+                                handshake.udp2,
+                                addr1,
+                                addr2,
+                            );
+                        } else {
+                            println!("UDP addresses received.");
+                            println!("Client 1 UDP address: {}", addr1);
+                            println!("Client 2 UDP address: {}", addr2);
 
-                        let udp_addr_to_bytes = |addr: &SocketAddr| {
-                            match addr {
-                                SocketAddr::V6(_) => panic!("IPv6 is not supported"),
-                                SocketAddr::V4(addr) => {
-                                    // Convert the IP address to bytes
-                                    let ip = addr.ip().octets();
-                                    let port = addr.port().to_be_bytes();
-                                    [ip[0], ip[1], ip[2], ip[3], port[0], port[1]]
+                            let udp_addr_to_bytes = |addr: &SocketAddr| {
+                                match addr {
+                                    SocketAddr::V6(_) => panic!("IPv6 is not supported"),
+                                    SocketAddr::V4(addr) => {
+                                        // Convert the IP address to bytes
+                                        let ip = addr.ip().octets();
+                                        let port = addr.port().to_be_bytes();
+                                        [ip[0], ip[1], ip[2], ip[3], port[0], port[1]]
+                                    }
                                 }
-                            }
-                        };
+                            };
 
-                        let send_udp_addr = |tcp: &mut TcpStream, addr: &SocketAddr| {
-                            let bytes = udp_addr_to_bytes(addr);
-                            tcp.write_all(&bytes)
-                                .expect("Failed to write UDP address to TCP stream");
-                        };
+                            let send_udp_addr = |tcp: &mut TcpStream, addr: &SocketAddr| {
+                                let bytes = udp_addr_to_bytes(addr);
+                                tcp.write_all(&bytes)
+                                    .expect("Failed to write UDP address to TCP stream");
+                            };
 
-                        // To each client, send the UDP address of their partner
-                        send_udp_addr(&mut handshake.tcp1, &addr2);
-                        send_udp_addr(&mut handshake.tcp2, &addr1);
+                            // To each client, send the UDP address of their partner
+                            send_udp_addr(&mut handshake.tcp1, &addr2);
+                            send_udp_addr(&mut handshake.tcp2, &addr1);
 
-                        self.state = CallCoordinatorState::Finished;
+                            self.state = CallCoordinatorState::Finished;
+                        }
                     } else {
                         self.state = CallCoordinatorState::Handshake(handshake);
                     }
                 }
-                CallCoordinatorState::Relay(ref udp1, ref udp2) => {
+                CallCoordinatorState::Relay(ref udp1, ref udp2, ref client1_addr, client2_addr) => {
                     // In relay mode, we simply relay messages between the two UDP sockets
+
+                    udp1.set_nonblocking(true)
+                        .expect("Failed to set non-blocking mode for udp1");
+                    udp2.set_nonblocking(true)
+                        .expect("Failed to set non-blocking mode for udp2");
+
                     let mut buffer = [0; 1024];
 
-                    if let Ok((size, addr)) = udp1.recv_from(&mut buffer) {
-                        udp2.send_to(&buffer[..size], addr)
+                    if let Ok((size, _)) = udp1.recv_from(&mut buffer) {
+                        udp2.send_to(&buffer[..size], client2_addr)
                             .expect("Failed to relay message from client 1 to client 2.");
                     }
 
-                    if let Ok((size, addr)) = udp2.recv_from(&mut buffer) {
-                        udp1.send_to(&buffer[..size], addr)
+                    if let Ok((size, _)) = udp2.recv_from(&mut buffer) {
+                        udp1.send_to(&buffer[..size], client1_addr)
                             .expect("Failed to relay message from client 2 to client 1.");
                     }
                 }

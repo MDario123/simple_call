@@ -103,6 +103,7 @@ pub fn handle_call(udp_sock: UdpSocket, peer_udp_addr: SocketAddr) {
 
                         if out_buff_empty_prefix == FRAME_SIZE {
                             if let Ok((size, _)) = udp_sock.recv_from(&mut recv_buff) {
+                                println!("Received {} bytes from UDP", size);
                                 decoder
                                     .decode_float(&recv_buff[..size], &mut out_buff, false)
                                     .unwrap();
