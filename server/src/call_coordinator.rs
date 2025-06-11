@@ -26,23 +26,10 @@ pub struct Handshake {
     retries: u8,
 }
 
-pub struct Standby {
-    tcp1: TcpStream,
-    tcp2: TcpStream,
-
-    udp1: UdpSocket,
-    udp2: UdpSocket,
-
-    client1_udp_addr: SocketAddr,
-    client2_udp_addr: SocketAddr,
-
-    ticks_since_last_event: u16,
-}
-
 pub enum CallCoordinator {
     HandshakeBegin(TcpStream, TcpStream),
     Handshake(Handshake),
-    Standby(Standby),
+    Finished,
 }
 
 // Functions
@@ -139,29 +126,14 @@ impl CallCoordinator {
                         send_udp_addr(&mut handshake.tcp1, &addr2);
                         send_udp_addr(&mut handshake.tcp2, &addr1);
 
-                        self = Self::Standby(Standby {
-                            tcp1: handshake.tcp1,
-                            tcp2: handshake.tcp2,
-                            udp1: handshake.udp1,
-                            udp2: handshake.udp2,
-                            client1_udp_addr: addr1,
-                            client2_udp_addr: addr2,
-                            ticks_since_last_event: 0,
-                        });
+                        self = Self::Finished;
                     } else {
                         self = Self::Handshake(handshake);
                     }
                 }
-                Self::Standby(mut standby) => {
-                    standby.ticks_since_last_event += 1;
-
-                    // 30 seconds timeout, in this case we assume that the call is properly
-                    // established between the clients
-                    if standby.ticks_since_last_event > 1500 {
-                        break 'outer;
-                    } else {
-                        self = Self::Standby(standby);
-                    }
+                Self::Finished => {
+                    println!("Call coordination finished.");
+                    break 'outer;
                 }
             }
             thread::sleep(Duration::from_millis(20));
