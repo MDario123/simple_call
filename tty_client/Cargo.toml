@@ -5,5 +5,5 @@ edition = "2024"
 
 [dependencies]
 cpal = "0.15"
-opus = "0.3.0"
+magnum-opus = "0.3.2"
 sha2 = "0.10.9"

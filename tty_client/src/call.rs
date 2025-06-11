@@ -9,7 +9,7 @@ use cpal::{
     BufferSize, InputCallbackInfo, OutputCallbackInfo, SampleRate, StreamConfig,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
-use opus::Encoder;
+use magnum_opus::Encoder;
 
 const FRAME_SIZE: usize = 960 * 3; // 60ms at 48kHz
 
@@ -34,8 +34,12 @@ pub fn handle_call(udp_sock: UdpSocket, peer_udp_addr: SocketAddr) {
         };
 
         // Initialize OPUS Encoder to encode input and send through socket
-        let mut encoder =
-            Encoder::new(48000, opus::Channels::Mono, opus::Application::Voip).unwrap();
+        let mut encoder = Encoder::new(
+            48000,
+            magnum_opus::Channels::Mono,
+            magnum_opus::Application::Voip,
+        )
+        .unwrap();
         encoder.set_inband_fec(true).unwrap();
 
         let mut in_buff = [0f32; FRAME_SIZE];
@@ -81,7 +85,7 @@ pub fn handle_call(udp_sock: UdpSocket, peer_udp_addr: SocketAddr) {
             sample_rate: SampleRate(48000),
             buffer_size: BufferSize::Fixed(FRAME_SIZE.mul(2).try_into().unwrap()),
         };
-        let mut decoder = opus::Decoder::new(48000, opus::Channels::Mono).unwrap();
+        let mut decoder = magnum_opus::Decoder::new(48000, magnum_opus::Channels::Mono).unwrap();
 
         let mut recv_buff = [0; 4096];
 
