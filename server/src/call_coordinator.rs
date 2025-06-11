@@ -13,6 +13,10 @@ pub const SIGNAL_PARTNER_FOUND: u8 = 2;
 
 // Types
 
+pub struct CallSettings {
+    pub relay: bool,
+}
+
 pub struct Handshake {
     tcp1: TcpStream,
     tcp2: TcpStream,
@@ -26,23 +30,38 @@ pub struct Handshake {
     retries: u8,
 }
 
-pub enum CallCoordinator {
+pub enum CallCoordinatorState {
     HandshakeBegin(TcpStream, TcpStream),
     Handshake(Handshake),
+    Relay(UdpSocket, UdpSocket),
     Finished,
+}
+
+pub struct CallCoordinator {
+    pub settings: CallSettings,
+    pub state: CallCoordinatorState,
 }
 
 // Functions
 
+impl CallSettings {
+    pub fn merge(self, other: CallSettings) -> Self {
+        Self {
+            relay: self.relay || other.relay,
+        }
+    }
+}
+
 impl CallCoordinator {
-    pub fn new(stream1: TcpStream, stream2: TcpStream) -> Self {
-        Self::HandshakeBegin(stream1, stream2)
+    pub fn new(stream1: TcpStream, stream2: TcpStream, settings: CallSettings) -> Self {
+        let state = CallCoordinatorState::HandshakeBegin(stream1, stream2);
+        Self { settings, state }
     }
 
     pub fn coordinate(mut self) {
         'outer: loop {
-            match self {
-                Self::HandshakeBegin(mut stream1, mut stream2) => {
+            match self.state {
+                CallCoordinatorState::HandshakeBegin(mut stream1, mut stream2) => {
                     let udp1 = new_udp_socket();
                     let udp2 = new_udp_socket();
 
@@ -58,19 +77,22 @@ impl CallCoordinator {
                     send_udp_addr(&udp1, &mut stream1);
                     send_udp_addr(&udp2, &mut stream2);
 
-                    let handshake = Handshake {
-                        tcp1: stream1,
-                        tcp2: stream2,
-                        udp1,
-                        udp2,
-                        client1_udp_addr: None,
-                        client2_udp_addr: None,
-                        retries: 10,
-                    };
-
-                    self = Self::Handshake(handshake);
+                    if self.settings.relay {
+                        self.state = CallCoordinatorState::Relay(udp1, udp2);
+                    } else {
+                        let handshake = Handshake {
+                            tcp1: stream1,
+                            tcp2: stream2,
+                            udp1,
+                            udp2,
+                            client1_udp_addr: None,
+                            client2_udp_addr: None,
+                            retries: 10,
+                        };
+                        self.state = CallCoordinatorState::Handshake(handshake);
+                    }
                 }
-                Self::Handshake(mut handshake) => {
+                CallCoordinatorState::Handshake(mut handshake) => {
                     handshake.retries -= 1;
                     if handshake.retries == 0 {
                         eprintln!("Failed to receive UDP addresses from clients.");
@@ -126,12 +148,26 @@ impl CallCoordinator {
                         send_udp_addr(&mut handshake.tcp1, &addr2);
                         send_udp_addr(&mut handshake.tcp2, &addr1);
 
-                        self = Self::Finished;
+                        self.state = CallCoordinatorState::Finished;
                     } else {
-                        self = Self::Handshake(handshake);
+                        self.state = CallCoordinatorState::Handshake(handshake);
                     }
                 }
-                Self::Finished => {
+                CallCoordinatorState::Relay(ref udp1, ref udp2) => {
+                    // In relay mode, we simply relay messages between the two UDP sockets
+                    let mut buffer = [0; 1024];
+
+                    if let Ok((size, addr)) = udp1.recv_from(&mut buffer) {
+                        udp2.send_to(&buffer[..size], addr)
+                            .expect("Failed to relay message from client 1 to client 2.");
+                    }
+
+                    if let Ok((size, addr)) = udp2.recv_from(&mut buffer) {
+                        udp1.send_to(&buffer[..size], addr)
+                            .expect("Failed to relay message from client 2 to client 1.");
+                    }
+                }
+                CallCoordinatorState::Finished => {
                     println!("Call coordination finished.");
                     break 'outer;
                 }

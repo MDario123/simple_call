@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::call_coordinator::CallCoordinator;
+use crate::call_coordinator::{CallCoordinator, CallSettings};
 
 pub const SIGNAL_WAITING_IN_ROOM: u8 = 1;
 
@@ -28,7 +28,7 @@ impl RoomCoordinator {
 
         println!("Sent SIGNAL_WAITING_IN_ROOM");
 
-        let partner_stream = {
+        let mut partner_stream = {
             let mut rooms = self.rooms.lock().expect("Lock should not be poisoned");
             let partner = rooms.remove(&room_hash);
 
@@ -42,36 +42,37 @@ impl RoomCoordinator {
             }
         };
 
+        let user1_settings = wait_for_preferred_settings(&mut stream);
+        let user2_settings = wait_for_preferred_settings(&mut partner_stream);
+
         println!("Initiating call with partner");
-        CallCoordinator::new(stream, partner_stream).coordinate();
+        CallCoordinator::new(stream, partner_stream, user1_settings.merge(user2_settings))
+            .coordinate();
     }
 }
 
 /// If someone writes more than 64 bytes, we might also consume them.
 fn wait_for_room_hash(stream: &mut TcpStream) -> [u8; 64] {
     let mut room_hash = [0; 64];
-    let mut room_hash_len = 0;
 
-    let mut buffer = [0; 1024];
-
-    while room_hash_len < room_hash.len() {
-        match stream.read(&mut buffer) {
-            Ok(size) => {
-                if size > 0 {
-                    println!("Received {} bytes", size);
-                    for i in buffer.iter().take(size) {
-                        room_hash[room_hash_len] = *i;
-                        room_hash_len += 1;
-                    }
-                } else {
-                    println!("No data received.");
-                }
-            }
-            Err(e) => {
-                eprintln!("Failed to read from stream: {}", e);
-            }
-        }
-    }
+    stream
+        .read_exact(&mut room_hash)
+        .expect("Failed to read room hash from stream");
 
     room_hash
+}
+
+fn wait_for_preferred_settings(stream: &mut TcpStream) -> CallSettings {
+    let mut buffer = [0; 1];
+
+    if stream.read_exact(&mut buffer).is_err() {
+        eprintln!("Failed to read preferred settings from stream.");
+        return CallSettings { relay: false };
+    }
+
+    if buffer[0] == 1 {
+        CallSettings { relay: true }
+    } else {
+        CallSettings { relay: false }
+    }
 }

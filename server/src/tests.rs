@@ -24,6 +24,9 @@ fn conn(room: &[u8], send_msg: &[u8], recv_msg: &[u8]) {
     tcp_stream
         .write_all(&room_hash)
         .expect("Failed to write to TCP stream.");
+    tcp_stream
+        .write_all(&[0])
+        .expect("Failed to write to TCP stream.");
 
     tcp_stream
         .set_read_timeout(Some(std::time::Duration::from_secs(1)))
