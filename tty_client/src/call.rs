@@ -12,7 +12,7 @@ use opus::{Bitrate, Encoder};
 
 const FRAME_SIZE: usize = 960 * 3; // 60ms at 48kHz
 const BITRATE: Bitrate = Bitrate::Bits(16000); // 16kbps
-const SILENCE_THRESHOLD_DBFS: f32 = -30.0; // Threshold for silence in dBFS
+const SILENCE_THRESHOLD_DBFS: f32 = -40.0; // Threshold for silence in dBFS
 
 /// Calculate the RMS (Root Mean Square) of the samples
 fn rms(samples: &[f32]) -> f32 {
@@ -54,12 +54,8 @@ pub fn handle_call(udp_sock: UdpSocket, peer_udp_addr: SocketAddr) {
         };
 
         // Initialize OPUS Encoder to encode input and send through socket
-        let mut encoder = Encoder::new(
-            48000,
-            opus::Channels::Mono,
-            opus::Application::Voip,
-        )
-        .unwrap();
+        let mut encoder =
+            Encoder::new(48000, opus::Channels::Mono, opus::Application::Voip).unwrap();
         encoder.set_bitrate(BITRATE).unwrap(); // 16kbps bitrate
 
         let mut in_buff = [0f32; FRAME_SIZE];
@@ -116,8 +112,7 @@ pub fn handle_call(udp_sock: UdpSocket, peer_udp_addr: SocketAddr) {
         let mut recv_buff = [0; 4096];
 
         let mut out_buff = [0f32; FRAME_SIZE];
-        let mut out_buff_filled_l = 0;
-        let mut out_buff_filled_r = 0;
+        let mut out_buff_filled_l = FRAME_SIZE;
 
         output_device
             .build_output_stream(
@@ -125,20 +120,19 @@ pub fn handle_call(udp_sock: UdpSocket, peer_udp_addr: SocketAddr) {
                 move |mut data: &mut [f32], _: &OutputCallbackInfo| {
                     while !data.is_empty() {
                         // Copy all that's possible from out_buff to data
-                        let to_copy = data.len().min(out_buff_filled_r - out_buff_filled_l);
+                        let to_copy = data.len().min(FRAME_SIZE - out_buff_filled_l);
                         data[..to_copy].copy_from_slice(
                             &out_buff[out_buff_filled_l..out_buff_filled_l + to_copy],
                         );
                         out_buff_filled_l += to_copy;
                         data = &mut data[to_copy..];
 
-                        if out_buff_filled_l == out_buff_filled_r {
+                        if out_buff_filled_l == FRAME_SIZE {
                             if let Ok((size, _)) = udp_sock.recv_from(&mut recv_buff) {
                                 println!("Received {} bytes from UDP", size);
                                 out_buff_filled_l = 0;
-                                out_buff_filled_r = FRAME_SIZE;
                                 if size == 0 {
-                                    out_buff.fill(0.0); // Fill with silence if no data
+                                    decoder.decode_float(&[], &mut out_buff, false).unwrap();
                                 } else {
                                     decoder
                                         .decode_float(&recv_buff[..size], &mut out_buff, false)
