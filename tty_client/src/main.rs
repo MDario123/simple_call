@@ -8,6 +8,7 @@ use std::{
     time::Duration,
 };
 
+use call::handle_call;
 use clap::Parser;
 use sha2::{Digest, Sha512};
 
@@ -18,6 +19,15 @@ pub const SIGNAL_READY: u8 = 3;
 fn main() {
     // Parse command line arguments
     let args = cli_args::Args::parse();
+
+    #[cfg(debug_assertions)]
+    if args.test {
+        println!("Running in test mode. This is not a real call.");
+        let udp_sock = UdpSocket::bind("127.0.0.1:0")
+            .expect("Failed to bind UDP socket. All UDP ports are in use?");
+        let addr = udp_sock.local_addr().unwrap();
+        handle_call(udp_sock, addr);
+    }
 
     let host = args.host;
     let host_tcp_port = args.host_tcp_port;
@@ -109,7 +119,7 @@ fn main() {
         }
     };
 
-    call::handle_call(udp_sock, peer_udp_addr);
+    handle_call(udp_sock, peer_udp_addr);
 }
 
 fn addr_from_bytes(buffer: &[u8]) -> SocketAddr {

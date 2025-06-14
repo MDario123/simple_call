@@ -20,6 +20,10 @@ pub struct Args {
     /// The alternative is to connect directly to the partner, which might not always work.
     #[clap(long, default_value_t = false)]
     pub relay: bool,
+
+    #[cfg(debug_assertions)]
+    #[clap(long, default_value_t = false)]
+    pub test: bool,
 }
 
 #[cfg(test)]
