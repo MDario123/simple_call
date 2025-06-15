@@ -8,5 +8,5 @@ edition = "2024"
 clap = { version = "4.5.40", features = ["derive"] }
 cpal = "0.15"
 nnnoiseless = "0.5.1"
-opus = "0.3.0"
+opus = { git = "https://github.com/Avi-D-coder/opus-rs" }
 sha2 = "0.10.9"
