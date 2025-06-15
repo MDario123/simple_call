@@ -7,5 +7,6 @@ edition = "2024"
 [dependencies]
 clap = { version = "4.5.40", features = ["derive"] }
 cpal = "0.15"
+nnnoiseless = "0.5.1"
 opus = "0.3.0"
 sha2 = "0.10.9"
