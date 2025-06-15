@@ -1,0 +1,107 @@
+env:
+  CARGO_TERM_COLOR: always
+  RUST_STABLE_VER: "1.86"
+
+name: Rust
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  rustfmt:
+    name: cargo fmt
+
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: tty_client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install stable toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
+          components: rustfmt
+
+      - name: cargo fmt
+        run: cargo fmt --all --check
+
+  test:
+    name: cargo clippy+test
+
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        working-directory: tty_client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install additional linux dependencies
+        run: |
+          sudo apt update
+          sudo apt install libopus-dev
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: install stable toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
+          components: clippy
+
+      - name: restore cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: cargo clippy
+        run: cargo clippy --verbose
+
+      - name: cargo test
+        run: cargo test --verbose
+  build:
+    name: cargo build
+
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        working-directory: tty_client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install additional linux dependencies
+        run: |
+          sudo apt update
+          sudo apt install libopus-dev
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: install stable toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
+
+      - name: restore cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: cargo build
+        run: cargo build --release
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tty-client-${{ matrix.os }}
+          path: |
+            target/release/tty-client
