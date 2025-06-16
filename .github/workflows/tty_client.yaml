@@ -104,4 +104,4 @@ jobs:
         with:
           name: tty-client-${{ matrix.os }}
           path: |
-            target/release/tty-client
+            target/release/tty_client
