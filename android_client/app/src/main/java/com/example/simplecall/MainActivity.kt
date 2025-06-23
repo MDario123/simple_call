@@ -1,47 +1,77 @@
 package com.example.simplecall
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.LiveData
+import com.example.simplecall.api.FetchProvider
+import com.example.simplecall.data.MainViewModel
+import com.example.simplecall.data.UrlModel
+import com.example.simplecall.data.cb.FetchResult
+import com.example.simplecall.ui.MainScreen
 import com.example.simplecall.ui.theme.SimpleCallTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), FetchResult {
+
+    lateinit var recommendedRooms: MutableState<List<String>>
+    lateinit var recentRooms: MutableState<List<String>>
+
+    private val mainViewModel: MainViewModel by viewModels()
+
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
+        recommendedRooms = mutableStateOf(listOf())
+        recentRooms = mutableStateOf(listOf())
+
+        mainViewModel.getUrlsFromDatabase().observe(this) {
+            urls -> recentRooms.value = urls.map {it.url}
+        }
+
+
+        var provider = FetchProvider()
+        provider.fetchUrls(this)
+
         setContent {
+
+            val roomsToShow = (recentRooms.value + recommendedRooms.value).distinct()
+
             SimpleCallTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                Text("SimpleCall")
+                            }
+                        )
+                    }
+                ) { padding ->
+                    Column(modifier = Modifier.padding(padding)) {
+                        MainScreen(this@MainActivity, mainViewModel, roomsToShow)
+                    }
                 }
             }
         }
     }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    SimpleCallTheme {
-        Greeting("John")
+    override fun onDataFetchedSuccess(urls: List<String>) {
+        recommendedRooms.value = urls
     }
+
+    override fun onDataFetchedFailed(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
 }

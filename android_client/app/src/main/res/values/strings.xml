@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Simple Call</string>
+    <string name="room_selector_label">Room</string>
+    <string name="room_selector_description">Write here the room you wish to connect to.\nFollow the format \"room@server\".</string>
+    <string name="room_selector_hint">Room address.</string>
+    <string name="connection_string_hint">Connection string...</string>
 </resources>
