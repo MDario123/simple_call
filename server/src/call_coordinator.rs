@@ -169,11 +169,13 @@ impl CallCoordinator {
                     let mut buffer = [0; 1024];
 
                     if let Ok((size, _)) = udp1.recv_from(&mut buffer) {
+                        println!("Received message({} bytes) from address: {}", size, client1_addr);
                         udp2.send_to(&buffer[..size], client2_addr)
                             .expect("Failed to relay message from client 1 to client 2.");
                     }
 
                     if let Ok((size, _)) = udp2.recv_from(&mut buffer) {
+                        println!("Received message({} bytes) from address: {}", size, client2_addr);
                         udp1.send_to(&buffer[..size], client1_addr)
                             .expect("Failed to relay message from client 2 to client 1.");
                     }
