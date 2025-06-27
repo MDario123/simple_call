@@ -10,3 +10,6 @@ cpal = "0.15"
 nnnoiseless = "0.5.1"
 opus = { git = "https://github.com/Avi-D-coder/opus-rs" }
 sha2 = "0.10.9"
+
+[profile.release]
+strip = true
