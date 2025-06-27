@@ -100,8 +100,17 @@ jobs:
         run: cargo build --release
 
       - name: Upload binary artifact
+        if: matrix.os != 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: tty-client-${{ matrix.os }}
           path: |
-            tty_client/target/release/tty_client
+            tty_client/target/release/simple_call_client_tty
+
+      - name: Upload binary artifact
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tty-client-${{ matrix.os }}
+          path: |
+            tty_client/target/release/simple_call_client_tty.exe
