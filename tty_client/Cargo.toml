@@ -1,5 +1,5 @@
 [package]
-name = "tty_client"
+name = "simple_call_client_tty"
 description = "A simple client to call using the opus protocol."
 version = "0.1.0"
 edition = "2024"
