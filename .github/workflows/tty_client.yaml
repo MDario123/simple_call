@@ -69,7 +69,7 @@ jobs:
         run: cargo test --verbose
   build:
     name: cargo build
-    dependencies: [rustfmt, test]
+    needs: [rustfmt, test]
 
     strategy:
       matrix:
