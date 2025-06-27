@@ -1,4 +1,4 @@
-package com.example.simplecall.data
+package com.mdario.simplecall.data
 
 class UrlRepository(private val urlDao: UrlDAO) {
 

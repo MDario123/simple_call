@@ -1,4 +1,4 @@
-package com.example.simplecall.data
+package com.mdario.simplecall.data
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

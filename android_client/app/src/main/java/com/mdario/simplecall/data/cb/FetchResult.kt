@@ -1,4 +1,4 @@
-package com.example.simplecall.data.cb
+package com.mdario.simplecall.data.cb
 
 interface FetchResult {
     fun onDataFetchedSuccess(urls: List<String>)

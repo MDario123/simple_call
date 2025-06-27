@@ -1,4 +1,4 @@
-package com.example.simplecall.ui.theme
+package com.mdario.simplecall.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

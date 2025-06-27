@@ -1,6 +1,6 @@
-package com.example.simplecall.api
+package com.mdario.simplecall.api
 
-import com.example.simplecall.data.cb.FetchResult
+import com.mdario.simplecall.data.cb.FetchResult
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import retrofit2.Call

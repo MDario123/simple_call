@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1093471685414",
+    "project_id": "simple-call-d7ed2",
+    "storage_bucket": "simple-call-d7ed2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1093471685414:android:bb6b1165994756a6158fe7",
+        "android_client_info": {
+          "package_name": "com.mdario.simplecall"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAESksN5TDxw_vCJnTlAM9H23t4WRVAal8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

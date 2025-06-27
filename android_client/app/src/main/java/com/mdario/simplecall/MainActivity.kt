@@ -1,4 +1,4 @@
-package com.example.simplecall
+package com.mdario.simplecall
 
 import android.os.Bundle
 import android.widget.Toast
@@ -14,13 +14,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.LiveData
-import com.example.simplecall.api.FetchProvider
-import com.example.simplecall.data.MainViewModel
-import com.example.simplecall.data.UrlModel
-import com.example.simplecall.data.cb.FetchResult
-import com.example.simplecall.ui.MainScreen
-import com.example.simplecall.ui.theme.SimpleCallTheme
+import com.mdario.simplecall.api.FetchProvider
+import com.mdario.simplecall.data.MainViewModel
+import com.mdario.simplecall.data.cb.FetchResult
+import com.mdario.simplecall.ui.MainScreen
+import com.mdario.simplecall.ui.theme.SimpleCallTheme
 
 class MainActivity : ComponentActivity(), FetchResult {
 

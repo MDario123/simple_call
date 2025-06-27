@@ -1,5 +1,6 @@
-package com.example.simplecall.ui
+package com.mdario.simplecall.ui
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,18 +13,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import com.example.simplecall.R
+import com.mdario.simplecall.R
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import com.example.simplecall.MainActivity
-import com.example.simplecall.data.AppDatabase
-import com.example.simplecall.data.MainViewModel
-import com.example.simplecall.data.UrlDAO
-import com.example.simplecall.data.UrlModel
+import androidx.core.content.ContextCompat.startActivity
+import com.mdario.simplecall.CallActivity
+import com.mdario.simplecall.MainActivity
+import com.mdario.simplecall.data.MainViewModel
 
 @Composable
 fun MainScreen(context: MainActivity, mainViewModel: MainViewModel, suggestedUrls: List<String>) {
@@ -51,6 +51,13 @@ fun MainScreen(context: MainActivity, mainViewModel: MainViewModel, suggestedUrl
                         try {
                             val address = parseAddress(search.value)
                             mainViewModel.addUrl(search.value)
+
+                            var intent = Intent(context, CallActivity::class.java)
+                            intent.putExtra("room", address.room)
+                            intent.putExtra("ip", address.ip)
+                            intent.putExtra("port", address.port)
+
+                            startActivity(context, intent, null)
                         } catch (e: IllegalArgumentException) {
                             Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
                         }

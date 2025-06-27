@@ -1,4 +1,4 @@
-package com.example.simplecall
+package com.mdario.simplecall
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
