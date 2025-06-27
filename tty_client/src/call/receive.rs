@@ -1,4 +1,4 @@
-use std::net::UdpSocket;
+use std::{net::UdpSocket, time::Instant};
 
 use cpal::OutputCallbackInfo;
 
@@ -14,6 +14,14 @@ fn bytes_human_readable(bytes: usize) -> String {
     }
 }
 
+fn duration_human_readable(duration: std::time::Duration) -> String {
+    format!(
+        "{}.{:03} seconds",
+        duration.as_secs(),
+        duration.subsec_millis()
+    )
+}
+
 pub(crate) fn create_speaker_callback(
     udp_sock: UdpSocket,
 ) -> impl FnMut(&mut [f32], &OutputCallbackInfo) {
@@ -26,59 +34,55 @@ pub(crate) fn create_speaker_callback(
     let mut recv_buff = [0; 4096];
 
     let mut out_buff = [0f32; FRAME_SIZE];
-    let mut out_buff_filled_l = FRAME_SIZE;
-
-    let mut last_id: u8 = 0;
+    let mut out_buff_filled_l = 0;
+    let mut out_buff_filled_r = 0;
 
     let mut bytes_received: usize = 0;
 
-    let instant = std::time::Instant::now();
+    let start_time = Instant::now();
+    let mut last_metrics_time = start_time;
 
     move |mut data: &mut [f32], _: &OutputCallbackInfo| {
+        let elapsed = last_metrics_time.elapsed();
+        if elapsed.as_secs() >= 1 {
+            last_metrics_time = Instant::now();
+            println!(
+                "Received: {} in {}.",
+                bytes_human_readable(bytes_received),
+                duration_human_readable(start_time.elapsed()),
+            );
+        }
         while !data.is_empty() {
             // Copy all that's possible from out_buff to data
-            let to_copy = data.len().min(FRAME_SIZE - out_buff_filled_l);
+            let to_copy = data.len().min(out_buff_filled_r - out_buff_filled_l);
             data[..to_copy]
                 .copy_from_slice(&out_buff[out_buff_filled_l..out_buff_filled_l + to_copy]);
             out_buff_filled_l += to_copy;
             data = &mut data[to_copy..];
 
-            if out_buff_filled_l == FRAME_SIZE {
-                if let Ok((size, _)) = udp_sock.recv_from(&mut recv_buff) {
-                    bytes_received += size + 24;
-                    let elapsed = instant.elapsed();
-                    println!(
-                        "Packet {}. Size: {}. Bytes received: {}. Elapsed: {:.2?} seconds.",
-                        recv_buff[0],
-                        size,
-                        bytes_human_readable(bytes_received),
-                        elapsed,
-                    );
-                    if recv_buff[0] != last_id.wrapping_add(1) {
-                        println!(
-                            "Packet ID mismatch: expected {}, got {}.",
-                            last_id.wrapping_add(1),
-                            recv_buff[0]
-                        );
-                    }
-                    last_id = recv_buff[0];
-                    out_buff_filled_l = 0;
+            if out_buff_filled_l == out_buff_filled_r {
+                let received = udp_sock.recv_from(&mut recv_buff);
+                match received {
+                    Ok((size, _)) => {
+                        bytes_received += size + 24;
 
-                    decoder
-                        .decode_float(&recv_buff[1..size], &mut out_buff, false)
-                        .unwrap();
-                } else {
-                    let elapsed = instant.elapsed();
-                    println!(
-                        "Packet {}. Size: {}. Bytes received: {}. Elapsed: {:.2?} seconds.",
-                        last_id,
-                        0,
-                        bytes_human_readable(bytes_received),
-                        elapsed,
-                    );
-                    last_id = last_id.wrapping_add(1);
-                    out_buff_filled_l = 0;
-                    decoder.decode_float(&[], &mut out_buff, false).unwrap();
+                        let decoded = decoder
+                            .decode_float(&recv_buff[0..size], &mut out_buff, false)
+                            .unwrap();
+
+                        out_buff_filled_l = 0;
+                        out_buff_filled_r = decoded;
+                    }
+                    Err(e) => {
+                        if e.kind() != std::io::ErrorKind::WouldBlock {
+                            eprintln!("Error receiving data: {}", e);
+                        }
+
+                        let decoded = decoder.decode_float(&[], &mut out_buff, false).unwrap();
+
+                        out_buff_filled_l = 0;
+                        out_buff_filled_r = decoded;
+                    }
                 }
             }
         }

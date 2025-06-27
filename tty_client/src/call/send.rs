@@ -65,8 +65,6 @@ pub(crate) fn create_microphone_callback(
     let mut in_buff_filled = 0;
     let mut buff = [0; 4096];
 
-    let mut id: u8 = 0;
-
     move |mut data: &[f32], _meta: &InputCallbackInfo| {
         while !data.is_empty() {
             let to_copy = data.len().min(FRAME_SIZE - in_buff_filled);
@@ -83,16 +81,12 @@ pub(crate) fn create_microphone_callback(
                 if is_silent(&in_buff) {
                     // udp_sock.send_to(&[id], peer_udp_addr).unwrap();
                 } else {
-                    let encoded_size = encoder.encode_float(&in_buff, &mut buff[1..]).unwrap();
-
-                    buff[0] = id; // Set packet ID
+                    let encoded_size = encoder.encode_float(&in_buff, &mut buff[0..]).unwrap();
 
                     udp_sock
-                        .send_to(&buff[..encoded_size + 1], peer_udp_addr)
+                        .send_to(&buff[..encoded_size], peer_udp_addr)
                         .unwrap();
                 }
-
-                id = id.wrapping_add(1);
             }
         }
     }
