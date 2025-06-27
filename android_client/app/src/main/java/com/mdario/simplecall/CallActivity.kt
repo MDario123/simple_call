@@ -8,13 +8,18 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import com.mdario.simplecall.service.CallService
 import com.mdario.simplecall.ui.theme.SimpleCallTheme
 
@@ -32,18 +37,10 @@ class CallActivity : ComponentActivity() {
             throw Error("This should never happen.")
         }
 
-        // Register the permissions callback, which handles the user's response to the
-        // system permissions dialog. Save the return value, an instance of
-        // ActivityResultLauncher. You can use either a val, as shown in this snippet,
-        // or a lateinit var in your onAttach() or onCreate() method.
-        // TODO: Also ask for notification permission
-
-
-
         val requestPermissionLauncher = registerForActivityResult(
             RequestMultiplePermissions()
         ) { permissions ->
-            if (permissions.all {it.value}) {
+            if (permissions.all { it.value }) {
                 var callIntent = Intent(this, CallService::class.java)
                 callIntent.putExtra("room", room)
                 callIntent.putExtra("ip", ip)
@@ -60,10 +57,15 @@ class CallActivity : ComponentActivity() {
                                         Text("SimpleCall")
                                     })
                             }) { padding ->
-                            Column(modifier = Modifier.padding(padding)) {
-                                Text(room)
-                                Text(ip)
-                                Text(port)
+                            Column(
+                                modifier = Modifier
+                                    .padding(padding)
+                                    .fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(room, fontWeight = FontWeight.Bold, fontSize = 70.sp)
+                                Text("$ip:$port", fontSize = 40.sp)
                             }
                         }
                     }
@@ -73,7 +75,7 @@ class CallActivity : ComponentActivity() {
             }
         }
 
-       requestPermissionLauncher.launch(
+        requestPermissionLauncher.launch(
             arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
         )
 

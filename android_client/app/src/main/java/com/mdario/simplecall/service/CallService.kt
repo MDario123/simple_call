@@ -40,17 +40,17 @@ class CallService : Service() {
             return START_NOT_STICKY
         }
 
-        startForeground(startId)
-
         val room = intent.getStringExtra("room")
         val ip = intent.getStringExtra("ip")
         val port = intent.getStringExtra("port")
+
+        startForeground(startId, room!!)
 
         callThreadHandler = Thread {
             handleCoordination(
                 InetAddress.getByName(ip),
                 port!!.toInt(),
-                room!!,
+                room,
                 true,
             )
         }
@@ -60,9 +60,9 @@ class CallService : Service() {
         return START_STICKY
     }
 
-    private fun startForeground(startId: Int) {
-        val channelID = "CHANNEL_ID"
-        val channelName = "CHANNEL_NAME"
+    private fun startForeground(startId: Int, room: String) {
+        val channelID = "call"
+        val channelName = "Call notification"
 
         // Create notification channel
         val channel = NotificationChannel(
@@ -81,9 +81,9 @@ class CallService : Service() {
         // Configure notification
         val notification = NotificationCompat.Builder(this, channelID)
             .setContentTitle("Calling")
-            .setContentText("Currently in room: XXXX")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .addAction(R.drawable.ic_launcher_foreground, "Stop", pendingIntent)
+            .setContentText("Currently in room: $room")
+            .setSmallIcon(R.mipmap.ic_launcher_round)
+            .addAction(R.mipmap.ic_launcher_round, "Stop", pendingIntent)
             .build()
 
         // Finally call startForeground
