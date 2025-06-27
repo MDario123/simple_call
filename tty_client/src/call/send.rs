@@ -7,11 +7,11 @@ use opus::{Bitrate, Encoder};
 use super::FRAME_SIZE;
 
 /// Threshold for silence detection in dBFS
-const SILENCE_THRESHOLD_DBFS: f32 = -40.0;
+const SILENCE_THRESHOLD_DBFS: f32 = -50.0;
 /// Gain factor for audio samples
 const GAIN: f32 = 2.0;
 /// The desired bitrate for the Opus encoder.
-const BITRATE: Bitrate = Bitrate::Bits(32_000); // 32kbps
+const BITRATE: Bitrate = Bitrate::Bits(16_000); // 16kbps
 
 /// Calculate the RMS (Root Mean Square) of the samples
 fn rms(samples: &[f32]) -> f32 {
