@@ -3,8 +3,10 @@ mod cli_args;
 mod coordination;
 mod utils;
 
+#[cfg(debug_assertions)]
 use std::net::UdpSocket;
 
+#[cfg(debug_assertions)]
 use call::handle_call;
 use clap::Parser;
 use coordination::handle_coordination;
