@@ -64,7 +64,7 @@ class CallActivity : ComponentActivity() {
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                Text(room, fontWeight = FontWeight.Bold, fontSize = 70.sp)
+                                Text(room, fontWeight = FontWeight.Bold, fontSize = 60.sp)
                                 Text("$ip:$port", fontSize = 40.sp)
                             }
                         }
